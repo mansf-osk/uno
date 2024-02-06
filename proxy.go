@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
@@ -15,16 +16,16 @@ func main() {
 }
 
 func startOriginServer() {
-	originServerHandler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	originServerHandler := http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
 		fmt.Printf("[ORIGIN] received request at: %s\n", time.Now())
-		_, _ = fmt.Fprint(rw, "Response from origin server\n")
+		_, _ = fmt.Fprintf(responseWriter, "Response from origin server for remote request from: %s\n", request.RemoteAddr)
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", originServerHandler))
 }
 
 func startReverseProxy() {
-	originServerURL, err := url.Parse("http://jsonplaceholder.typicode.com")
+	originServerURL, err := url.Parse("http://127.0.0.1:8080")
 	if err != nil {
 		log.Fatalf("invalid origin server URL: %s", err)
 	}
@@ -33,23 +34,17 @@ func startReverseProxy() {
 		fmt.Printf("[PROXY] received request at: %s\n", time.Now())
 		// fmt.Println("[PROXY] request content:", request)
 
-		// fmt.Println("Host:", request.Host)
-		// fmt.Println("URLHost:", request.URL.Host)
-		// fmt.Println("URLScheme:", request.URL.Scheme)
-		// fmt.Println("ReqURI:", request.RequestURI)
-
-		//set request data to forward to origin server
+		//change request data to send to origin server instead
 		request.Host = originServerURL.Host
 		request.URL.Host = originServerURL.Host
 		request.URL.Scheme = originServerURL.Scheme
 		request.RequestURI = ""
 
-		// fmt.Println("Host:", request.Host)
-		// fmt.Println("URLHost:", request.URL.Host)
-		// fmt.Println("URLScheme:", request.URL.Scheme)
-		// fmt.Println("ReqURI:", request.RequestURI)
+		//set "X-Forwarded-For"-Header to retain remote address
+		remoteHostAddr, _, _ := net.SplitHostPort(request.RemoteAddr)
+		responseWriter.Header().Set("X-Forwarded-For", remoteHostAddr)
 
-		//save response from origin server
+		//send request to origin server and save response
 		originServerResponse, err := http.DefaultClient.Do(request)
 		if err != nil {
 			responseWriter.WriteHeader(http.StatusInternalServerError)
@@ -57,8 +52,16 @@ func startReverseProxy() {
 			return
 		}
 
+		//copy http-headers from origin server response
+		for key, values := range originServerResponse.Header {
+			for _, value := range values {
+				responseWriter.Header().Set(key, value)
+			}
+
+		}
+
 		//return response to client
-		responseWriter.WriteHeader(http.StatusOK)
+		responseWriter.WriteHeader(originServerResponse.StatusCode)
 		io.Copy(responseWriter, originServerResponse.Body)
 	})
 
