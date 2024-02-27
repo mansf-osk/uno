@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	go startOriginServer() //start origin server in a new goroutine for testing purpose at localhost:8080
+	go startOriginServer() // start origin server in a new goroutine for testing purpose at localhost:8080
 	startReverseProxy()
 }
 
@@ -34,17 +34,17 @@ func startReverseProxy() {
 		fmt.Printf("[PROXY] received request at: %s\n", time.Now())
 		// fmt.Println("[PROXY] request content:", request)
 
-		//change request data to send to origin server instead
+		// change request data to send to origin server instead
 		request.Host = originServerURL.Host
 		request.URL.Host = originServerURL.Host
 		request.URL.Scheme = originServerURL.Scheme
 		request.RequestURI = ""
 
-		//set "X-Forwarded-For"-Header to retain remote address
+		// set "X-Forwarded-For"-Header to retain remote address
 		remoteHostAddr, _, _ := net.SplitHostPort(request.RemoteAddr)
 		responseWriter.Header().Set("X-Forwarded-For", remoteHostAddr)
 
-		//send request to origin server and save response
+		// send request to origin server and save response
 		originServerResponse, err := http.DefaultClient.Do(request)
 		if err != nil {
 			responseWriter.WriteHeader(http.StatusInternalServerError)
@@ -52,15 +52,14 @@ func startReverseProxy() {
 			return
 		}
 
-		//copy http-headers from origin server response
+		// copy http-headers from origin server response
 		for key, values := range originServerResponse.Header {
 			for _, value := range values {
 				responseWriter.Header().Set(key, value)
 			}
-
 		}
 
-		//return response to client
+		// return response to client
 		responseWriter.WriteHeader(originServerResponse.StatusCode)
 		io.Copy(responseWriter, originServerResponse.Body)
 	})
