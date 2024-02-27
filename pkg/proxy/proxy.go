@@ -1,4 +1,4 @@
-package main
+package proxy
 
 import (
 	"fmt"
@@ -10,21 +10,7 @@ import (
 	"time"
 )
 
-func main() {
-	go startOriginServer() // start origin server in a new goroutine for testing purpose at localhost:8080
-	startReverseProxy()
-}
-
-func startOriginServer() {
-	originServerHandler := http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
-		fmt.Printf("[ORIGIN] received request at: %s\n", time.Now())
-		_, _ = fmt.Fprintf(responseWriter, "Response from origin server for remote request from: %s\n", request.RemoteAddr)
-	})
-
-	log.Fatal(http.ListenAndServe(":8080", originServerHandler))
-}
-
-func startReverseProxy() {
+func StartReverseProxy() {
 	originServerURL, err := url.Parse("http://127.0.0.1:8080")
 	if err != nil {
 		log.Fatalf("invalid origin server URL: %s", err)
@@ -52,12 +38,7 @@ func startReverseProxy() {
 			return
 		}
 
-		// copy http-headers from origin server response
-		for key, values := range originServerResponse.Header {
-			for _, value := range values {
-				responseWriter.Header().Set(key, value)
-			}
-		}
+		copyOriginHeaders(originServerResponse, responseWriter)
 
 		// return response to client
 		responseWriter.WriteHeader(originServerResponse.StatusCode)
@@ -65,4 +46,13 @@ func startReverseProxy() {
 	})
 
 	log.Fatal(http.ListenAndServe(":8081", reverseProxyHandler))
+}
+
+// Copy http-headers from origin server response
+func copyOriginHeaders(response *http.Response, rw http.ResponseWriter) {
+	for key, values := range response.Header {
+		for _, value := range values {
+			rw.Header().Set(key, value)
+		}
+	}
 }
