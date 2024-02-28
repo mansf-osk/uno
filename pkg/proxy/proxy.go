@@ -25,3 +25,7 @@ func buildRewriteFunc(target *url.URL) func(pr *httputil.ProxyRequest) {
 func ServeReverseProxy(addr string, rp *httputil.ReverseProxy) {
 	log.Fatal(http.ListenAndServe(addr, rp))
 }
+
+func ServeTLSProxy(addr string, certFile string, keyFile string, rp *httputil.ReverseProxy) {
+	log.Fatal(http.ListenAndServeTLS(addr, certFile, keyFile, rp))
+}

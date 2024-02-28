@@ -15,7 +15,8 @@ const (
 
 func main() {
 	fmt.Printf("Uno listening on %s and redirecting to origin server at %s\n", rawProxyAddr, rawTargetURL)
-	proxy.ServeReverseProxy(rawProxyAddr, proxy.NewReverseProxy(parseURL(rawTargetURL)))
+	// proxy.ServeReverseProxy(rawProxyAddr, proxy.NewReverseProxy(parseURL(rawTargetURL)))
+	proxy.ServeTLSProxy(rawProxyAddr, "cert.pem", "key.pem", proxy.NewReverseProxy(parseURL(rawTargetURL)))
 }
 
 // Parses raw URL as string into url.URL and checks for errors
