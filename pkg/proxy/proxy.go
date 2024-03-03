@@ -18,7 +18,6 @@ func buildRewriteFunc(target *url.URL) func(pr *httputil.ProxyRequest) {
 	return func(pr *httputil.ProxyRequest) {
 		pr.SetXForwarded()
 		pr.SetURL(target)
-		pr.Out.Header.Set("X-Additional-Header", "this header was added by the proxy")
 	}
 }
 
