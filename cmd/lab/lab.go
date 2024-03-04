@@ -8,21 +8,28 @@ import (
 )
 
 func main() {
-	serveRequestLogger()
+	http.Handle("/", http.HandlerFunc(home))
+	http.Handle("/echo", http.HandlerFunc(requestEcho))
+
+	err := http.ListenAndServe("127.0.0.0:8080", nil)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
 
-func serveRequestLogger() {
-	originServerHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[ORIGIN] received request at: %s\n", time.Now())
-		_, _ = fmt.Fprintf(w, "Response from origin server for remote request from: %s\n", r.RemoteAddr)
-		_, _ = fmt.Fprintf(w, "[Request-Protocol]\n%s\n", r.Proto)
-		_, _ = fmt.Fprintf(w, "[Request-Headers]\n%s\n", HeaderToString(&r.Header))
-	})
-
-	log.Fatal(http.ListenAndServe(":8080", originServerHandler))
+func home(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[ORIGIN] received request at %s from %s\n", time.Now(), r.RemoteAddr)
+	_, _ = fmt.Fprintf(w, "Response from origin server for remote request from: %s\n", r.RemoteAddr)
 }
 
-func HeaderToString(h *http.Header) string {
+func requestEcho(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[ORIGIN] received request at: %s\n", time.Now())
+	_, _ = fmt.Fprintf(w, "Response from origin server for remote request from: %s\n", r.RemoteAddr)
+	_, _ = fmt.Fprintf(w, "[Request-Protocol]\n%s\n", r.Proto)
+	_, _ = fmt.Fprintf(w, "[Request-Headers]\n%s\n", headerToString(&r.Header))
+}
+
+func headerToString(h *http.Header) string {
 	headerString := ""
 	for header, values := range *h {
 		headerValues := ""
